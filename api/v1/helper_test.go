@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/k8snetworkplumbingwg/sriov-network-operator/pkg/consts"
 )
 
 var update = flag.Bool("updategolden", false, "update .golden files")
@@ -77,7 +78,7 @@ func newNodePolicy() *v1.SriovNetworkNodePolicy {
 			Name: "p1",
 		},
 		Spec: v1.SriovNetworkNodePolicySpec{
-			DeviceType: "netdevice",
+			DeviceType: consts.DeviceTypeNetDevice,
 			NicSelector: v1.SriovNetworkNicSelector{
 				PfNames:     []string{"ens803f1"},
 				RootDevices: []string{"0000:86:00.1"},
@@ -89,6 +90,52 @@ func newNodePolicy() *v1.SriovNetworkNodePolicy {
 			NumVfs:       2,
 			Priority:     99,
 			ResourceName: "p1res",
+		},
+	}
+}
+
+func newVirtioVdpaNodePolicy() *v1.SriovNetworkNodePolicy {
+	return &v1.SriovNetworkNodePolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "p1",
+		},
+		Spec: v1.SriovNetworkNodePolicySpec{
+			DeviceType: consts.DeviceTypeNetDevice,
+			VdpaType:   consts.VdpaTypeVirtio,
+			NicSelector: v1.SriovNetworkNicSelector{
+				PfNames:     []string{"ens803f1#2-3"},
+				RootDevices: []string{"0000:86:00.1"},
+				Vendor:      "8086",
+			},
+			NodeSelector: map[string]string{
+				"feature.node.kubernetes.io/network-sriov.capable": "true",
+			},
+			NumVfs:       4,
+			Priority:     99,
+			ResourceName: "virtiovdpa",
+		},
+	}
+}
+
+func newVhostVdpaNodePolicy() *v1.SriovNetworkNodePolicy {
+	return &v1.SriovNetworkNodePolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "p1",
+		},
+		Spec: v1.SriovNetworkNodePolicySpec{
+			DeviceType: consts.DeviceTypeNetDevice,
+			VdpaType:   consts.VdpaTypeVhost,
+			NicSelector: v1.SriovNetworkNicSelector{
+				PfNames:     []string{"ens803f1"},
+				RootDevices: []string{"0000:86:00.1"},
+				Vendor:      "8086",
+			},
+			NodeSelector: map[string]string{
+				"feature.node.kubernetes.io/network-sriov.capable": "true",
+			},
+			NumVfs:       2,
+			Priority:     99,
+			ResourceName: "vhostvdpa",
 		},
 	}
 }
@@ -138,11 +185,11 @@ func TestRendering(t *testing.T) {
 			gp := filepath.Join("testdata", filepath.FromSlash(t.Name())+".golden")
 			if *update {
 				t.Log("update golden file")
-				if err := ioutil.WriteFile(gp, b.Bytes(), 0644); err != nil {
+				if err := os.WriteFile(gp, b.Bytes(), 0644); err != nil {
 					t.Fatalf("failed to update golden file: %s", err)
 				}
 			}
-			g, err := ioutil.ReadFile(gp)
+			g, err := os.ReadFile(gp)
 			if err != nil {
 				t.Fatalf("failed reading .golden: %s", err)
 			}
@@ -185,11 +232,11 @@ func TestIBRendering(t *testing.T) {
 			gp := filepath.Join("testdata", filepath.FromSlash(t.Name())+".golden")
 			if *update {
 				t.Log("update golden file")
-				if err := ioutil.WriteFile(gp, b.Bytes(), 0644); err != nil {
+				if err := os.WriteFile(gp, b.Bytes(), 0644); err != nil {
 					t.Fatalf("failed to update golden file: %s", err)
 				}
 			}
-			g, err := ioutil.ReadFile(gp)
+			g, err := os.ReadFile(gp)
 			if err != nil {
 				t.Fatalf("failed reading .golden: %s", err)
 			}
@@ -222,7 +269,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -242,7 +289,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.0",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "netdevice",
+								DeviceType:   consts.DeviceTypeNetDevice,
 								ResourceName: "prevres",
 								VfRange:      "0-1",
 								PolicyName:   "p2",
@@ -261,7 +308,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.0",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "prevres",
 							VfRange:      "0-1",
 							PolicyName:   "p2",
@@ -274,7 +321,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -296,7 +343,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.1",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "vfiores",
 								VfRange:      "0-1",
 								PolicyName:   "p2",
@@ -315,7 +362,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -338,7 +385,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						Mtu:        2000,
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "vfiores",
 								VfRange:      "0-1",
 								PolicyName:   "p2",
@@ -358,7 +405,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -379,7 +426,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.1",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "vfiores",
 								VfRange:      "2-4",
 								PolicyName:   "p2",
@@ -398,15 +445,64 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
 						},
 						{
-							DeviceType:   "vfio-pci",
+							DeviceType:   consts.DeviceTypeVfioPci,
 							ResourceName: "vfiores",
 							VfRange:      "2-4",
+							PolicyName:   "p2",
+						},
+					},
+				},
+			},
+		},
+		{
+			// vdpa policy with same priority (both virtio and vhost), VfRange's do not overlap so all is merged
+			tname: "one vdpa policy present same pf same priority partitioning",
+			currentState: func() *v1.SriovNetworkNodeState {
+				st := newNodeState()
+				st.Spec.Interfaces = []v1.Interface{
+					{
+						Name:       "ens803f1",
+						NumVfs:     4,
+						PciAddress: "0000:86:00.1",
+						VfGroups: []v1.VfGroup{
+							{
+								DeviceType:   consts.DeviceTypeNetDevice,
+								VdpaType:     consts.VdpaTypeVhost,
+								ResourceName: "vhostvdpa",
+								VfRange:      "0-1",
+								PolicyName:   "p2",
+							},
+						},
+					},
+				}
+				return st
+			}(),
+			policy: newVirtioVdpaNodePolicy(),
+			equalP: true,
+			expectedInterfaces: []v1.Interface{
+				{
+					Name:       "ens803f1",
+					NumVfs:     4,
+					PciAddress: "0000:86:00.1",
+					VfGroups: []v1.VfGroup{
+						{
+							DeviceType:   consts.DeviceTypeNetDevice,
+							VdpaType:     consts.VdpaTypeVirtio,
+							ResourceName: "virtiovdpa",
+							VfRange:      "2-3",
+							PolicyName:   "p1",
+						},
+						{
+							DeviceType:   consts.DeviceTypeNetDevice,
+							VdpaType:     consts.VdpaTypeVhost,
+							ResourceName: "vhostvdpa",
+							VfRange:      "0-1",
 							PolicyName:   "p2",
 						},
 					},
@@ -426,13 +522,13 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.1",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "vfiores1",
 								VfRange:      "0-0",
 								PolicyName:   "p2",
 							},
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "vfiores2",
 								VfRange:      "1-1",
 								PolicyName:   "p3",
@@ -451,7 +547,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -473,7 +569,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.1",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "p1res",
 								VfRange:      "2-3",
 								PolicyName:   "p2",
@@ -492,7 +588,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
@@ -514,7 +610,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 						PciAddress: "0000:86:00.1",
 						VfGroups: []v1.VfGroup{
 							{
-								DeviceType:   "vfio-pci",
+								DeviceType:   consts.DeviceTypeVfioPci,
 								ResourceName: "p2res",
 								VfRange:      "2-3",
 								PolicyName:   "p2",
@@ -533,13 +629,13 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					PciAddress: "0000:86:00.1",
 					VfGroups: []v1.VfGroup{
 						{
-							DeviceType:   "netdevice",
+							DeviceType:   consts.DeviceTypeNetDevice,
 							ResourceName: "p1res",
 							VfRange:      "0-1",
 							PolicyName:   "p1",
 						},
 						{
-							DeviceType:   "vfio-pci",
+							DeviceType:   consts.DeviceTypeVfioPci,
 							ResourceName: "p2res",
 							VfRange:      "2-3",
 							PolicyName:   "p2",
@@ -556,7 +652,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					Name: "p1",
 				},
 				Spec: v1.SriovNetworkNodePolicySpec{
-					DeviceType: "netdevice",
+					DeviceType: consts.DeviceTypeNetDevice,
 					NicSelector: v1.SriovNetworkNicSelector{
 						PfNames:     []string{},
 						RootDevices: []string{},
@@ -580,7 +676,7 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 					Name: "p1",
 				},
 				Spec: v1.SriovNetworkNodePolicySpec{
-					DeviceType: "netdevice",
+					DeviceType: consts.DeviceTypeNetDevice,
 					NicSelector: v1.SriovNetworkNicSelector{
 						PfNames:     []string{"ens803f0#a-c"},
 						RootDevices: []string{},
@@ -596,6 +692,100 @@ func TestSriovNetworkNodePolicyApply(t *testing.T) {
 			equalP:             false,
 			expectedInterfaces: nil,
 			expectedErr:        true,
+		},
+	}
+	for _, tc := range testtable {
+		t.Run(tc.tname, func(t *testing.T) {
+			err := tc.policy.Apply(tc.currentState, tc.equalP)
+			if tc.expectedErr && err == nil {
+				t.Errorf("Apply expecting error.")
+			} else if !tc.expectedErr && err != nil {
+				t.Errorf("Apply error:\n%s", err)
+			}
+			if diff := cmp.Diff(tc.expectedInterfaces, tc.currentState.Spec.Interfaces); diff != "" {
+				t.Errorf("SriovNetworkNodeState spec diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestVirtioVdpaNodePolicyApply(t *testing.T) {
+	testtable := []struct {
+		tname              string
+		currentState       *v1.SriovNetworkNodeState
+		policy             *v1.SriovNetworkNodePolicy
+		expectedInterfaces v1.Interfaces
+		equalP             bool
+		expectedErr        bool
+	}{
+		{
+			tname:        "virtio/vdpa configuration",
+			currentState: newNodeState(),
+			policy:       newVirtioVdpaNodePolicy(),
+			equalP:       false,
+			expectedInterfaces: []v1.Interface{
+				{
+					Name:       "ens803f1",
+					NumVfs:     4,
+					PciAddress: "0000:86:00.1",
+					VfGroups: []v1.VfGroup{
+						{
+							DeviceType:   consts.DeviceTypeNetDevice,
+							VdpaType:     consts.VdpaTypeVirtio,
+							ResourceName: "virtiovdpa",
+							VfRange:      "2-3",
+							PolicyName:   "p1",
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testtable {
+		t.Run(tc.tname, func(t *testing.T) {
+			err := tc.policy.Apply(tc.currentState, tc.equalP)
+			if tc.expectedErr && err == nil {
+				t.Errorf("Apply expecting error.")
+			} else if !tc.expectedErr && err != nil {
+				t.Errorf("Apply error:\n%s", err)
+			}
+			if diff := cmp.Diff(tc.expectedInterfaces, tc.currentState.Spec.Interfaces); diff != "" {
+				t.Errorf("SriovNetworkNodeState spec diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestVhostVdpaNodePolicyApply(t *testing.T) {
+	testtable := []struct {
+		tname              string
+		currentState       *v1.SriovNetworkNodeState
+		policy             *v1.SriovNetworkNodePolicy
+		expectedInterfaces v1.Interfaces
+		equalP             bool
+		expectedErr        bool
+	}{
+		{
+			tname:        "vhost/vdpa configuration",
+			currentState: newNodeState(),
+			policy:       newVhostVdpaNodePolicy(),
+			equalP:       false,
+			expectedInterfaces: []v1.Interface{
+				{
+					Name:       "ens803f1",
+					NumVfs:     2,
+					PciAddress: "0000:86:00.1",
+					VfGroups: []v1.VfGroup{
+						{
+							DeviceType:   consts.DeviceTypeNetDevice,
+							VdpaType:     consts.VdpaTypeVhost,
+							ResourceName: "vhostvdpa",
+							VfRange:      "0-1",
+							PolicyName:   "p1",
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, tc := range testtable {

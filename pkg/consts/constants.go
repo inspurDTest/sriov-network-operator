@@ -29,4 +29,6 @@ const (
 
 	DeviceTypeVfioPci   = "vfio-pci"
 	DeviceTypeNetDevice = "netdevice"
+	VdpaTypeVirtio      = "virtio"
+	VdpaTypeVhost       = "vhost"
 )

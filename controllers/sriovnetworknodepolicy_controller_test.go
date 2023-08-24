@@ -1,12 +1,19 @@
 package controllers
 
 import (
+	"encoding/json"
+	sriovnetworkv1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
 	"testing"
 
-	sriovnetworkv1 "github.com/k8snetworkplumbingwg/sriov-network-operator/api/v1"
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
+	_ "k8s.io/apimachinery/pkg/apis/meta/v1"
+	_ "k8s.io/apimachinery/pkg/runtime"
+	_ "k8s.io/apimachinery/pkg/util/runtime"
+
+
+	dptypes "github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/types"
+
 )
 
 func TestNodeSelectorMerge(t *testing.T) {
@@ -122,3 +129,15 @@ func TestNodeSelectorMerge(t *testing.T) {
 		})
 	}
 }
+
+func mustMarshallSelector(t *testing.T, input *dptypes.NetDeviceSelectors) *json.RawMessage {
+	out, err := json.Marshal(input)
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+		return nil
+	}
+	ret := json.RawMessage(out)
+	return &ret
+}
+
