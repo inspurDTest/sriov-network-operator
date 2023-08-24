@@ -11,9 +11,7 @@ import (
 	_ "k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/apimachinery/pkg/util/runtime"
 
-
 	dptypes "github.com/k8snetworkplumbingwg/sriov-network-device-plugin/pkg/types"
-
 )
 
 func TestNodeSelectorMerge(t *testing.T) {
@@ -140,4 +138,3 @@ func mustMarshallSelector(t *testing.T, input *dptypes.NetDeviceSelectors) *json
 	ret := json.RawMessage(out)
 	return &ret
 }
-
