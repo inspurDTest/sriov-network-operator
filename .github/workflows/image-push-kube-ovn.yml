@@ -42,8 +42,9 @@ jobs:
 
       - name: Build and push sriov-network-operator-config-daemon
         run: |
-            docker build -t inspurwyd/sriov-config-daemon:kube-ovn-test -f Dockerfile.sriov-network-config-daemon .
-            docker push  inspurwyd/sriov-config-daemon:kube-ovn-test
+            docker buildx create --use
+            docker buildx build --no-cache  --DOCKERFILE   Dockerfile.sriov-network-config-daemon 
+         
   build-and-push-image-webhook:
     runs-on: ubuntu-20.04
     env:
