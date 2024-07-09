@@ -69,7 +69,7 @@ update-codegen:
 	hack/update-codegen.sh
 
 image: ; $(info Building image...)
-	$(IMAGE_BUILDER) build -f $(DOCKERFILE) -t $(IMAGE_TAG) $(CURPATH) $(IMAGE_BUILD_OPTS)
+	$(IMAGE_BUILDER) buildx build  -f --platform linux/amd64,linux/arm64  $(DOCKERFILE) -t $(IMAGE_TAG) $(CURPATH) $(IMAGE_BUILD_OPTS) --push
 
 # Run tests
 test: generate vet manifests envtest
